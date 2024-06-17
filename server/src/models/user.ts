@@ -7,10 +7,10 @@ export interface IUser extends mongoose.Document {
     contacts?: IContact[];
 }
 
-const schema = new mongoose.Schema<IUser>({
-    username: { type: String, required: true },
+const UserSchema = new mongoose.Schema<IUser>({
+    username: { type: String, required: true, uniqie: true},
     passwordHash: { type: String, required: true },
     contacts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Contact' }]
 });
 
-export const User = mongoose.model<IUser>('User', schema);
+export const User = mongoose.model<IUser>('User', UserSchema);

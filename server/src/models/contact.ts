@@ -30,6 +30,7 @@ const constactSchema = new mongoose.Schema({
     phoneNumbers: { type: [phoneNumberSchema], required: true },
     lastName: String,
     picture: String,
+    address: String,
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 })
 
