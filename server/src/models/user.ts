@@ -2,8 +2,8 @@ import mongoose from "mongoose"
 import { IContact } from "./contact";
 
 export interface IUser extends mongoose.Document {
-    username: String;
-    passwordHash: String;
+    username: string;
+    passwordHash: string;
     contacts?: IContact[];
 }
 

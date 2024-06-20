@@ -9,15 +9,15 @@ export enum PhoneNumberType {
 
 export interface IPhoneNumber extends mongoose.Document{
     type: PhoneNumberType;
-    number: String;
+    number: string;
 }
 
 export interface IContact extends mongoose.Document{
-    firstName: String;
-    lastName?: String;
-    picture?: String;
+    firstName: string;
+    lastName?: string;
+    picture?: string;
     phoneNumbers: IPhoneNumber[];
-    address?: String;
+    address?: string;
 }
 
 const phoneNumberSchema = new mongoose.Schema<IPhoneNumber>({
