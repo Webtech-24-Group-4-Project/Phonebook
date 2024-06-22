@@ -1,14 +1,22 @@
 import React, { useEffect } from 'react';
-import axios from 'axios';
-import { IContact } from './models/contact';
-import defaultProfilePicture from './user_profile.png';
-import Contacts from './components/pages/Home/Contacts';
+import { RouterProvider } from 'react-router-dom';
+import { routes } from './routes';
+import { useAppDispatch } from './store/hooks';
+import { initUser, selectUser, login } from './store/features/userSlice';
+import { useAppSelector } from './store/hooks';
 
 const App: React.FC = () => {
+  const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    dispatch(initUser());
+  }, [dispatch]);
+
+  let user = useAppSelector(selectUser);
 
   return (
     <>
-      <Contacts />
+        <RouterProvider router={routes} />
     </>
   );
 }

@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import axios from 'axios';
 import { IContact } from '../../../models/contact';
 import defaultProfilePicture from '../../../user_profile.png';
-import CreateContactForm from '../../core/create-contact-form/CreateContactForm';
+import CreateContactForm from '../../shared/create-contact-form/CreateContactForm';
 import styles from './Contacts.module.css';
 
 const Contacts: React.FC = () => {

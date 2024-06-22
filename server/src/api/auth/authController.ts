@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { User } from '../../models/user.model';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { checkAuth } from '../../middleware/checkAuth';
+import { IAuthRequest } from '../../interfaces/authRequest';
 
 const authController = Router();
 
@@ -56,12 +58,23 @@ authController.post('/login', async (req, res) => {
         secure: process.env.NODE_ENV === 'production'
     });
 
-    res.sendStatus(200);
+    res.status(200);
+    res.json({ username: user.username });
 });
 
 authController.post('/logout', (req, res) => {
     res.clearCookie('PhonebookAuth');
     res.sendStatus(200);
+});
+
+authController.get('/current', checkAuth, async (req: IAuthRequest, res) => {
+    if (req.userId) {
+        const user = await User.findById(req.userId);
+        res.json({ username: user?.username });
+    }
+    else {
+        res.json({ username: null });
+    }
 });
 
 export default authController;

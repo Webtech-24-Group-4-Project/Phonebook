@@ -4,6 +4,7 @@ import cors from "cors"
 import mongoose from "mongoose";
 import contactsController from "./api/contactsController";
 import authController from "./api/auth/authController";
+import cookieParser from "cookie-parser";
 
 dotenv.config();
 
@@ -15,6 +16,7 @@ app.use(cors({
   origin: true,
   credentials: true
 }));
+app.use(cookieParser());
 
 app.use("/contacts", contactsController);
 app.use("/auth", authController);

@@ -2,13 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { IAuthRequest } from '../interfaces/authRequest';
 
-export const requireAuth = (req: IAuthRequest, res: Response, next: NextFunction) => {
+export const checkAuth = (req: IAuthRequest, res: Response, next: NextFunction) => {
     const token = req.cookies?.PhonebookAuth;
-
-    if (!token) {
-        return res.status(401).send('Unauthorized');
-    }
-
+    
     try {
         const { id } = jwt.verify(token, process.env.JWT_SECRET as string) as { id: string };
 
@@ -16,6 +12,8 @@ export const requireAuth = (req: IAuthRequest, res: Response, next: NextFunction
 
         next();
     } catch (error) {
-        res.status(401).send('Unauthorized');
+        req.userId = null;
+
+        next();
     }
 };
