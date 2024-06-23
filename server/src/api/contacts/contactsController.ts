@@ -3,30 +3,59 @@ import { Contact } from "../../models/contact.model";
 import { User } from "../../models/user.model";
 import { requireAuth } from "../../middleware/requireAuth";
 import { IAuthRequest } from "../../interfaces/authRequest";
+import multer from "multer";
+import fs from "fs";
+import path from "path";
+import mime from "mime-types";
+import { IContact, IPhoneNumber } from "../../interfaces/contact";
+import { IContactResponse } from "../models/contactResponse";
+import dotenv from "dotenv";
 
 const router = express.Router();
 
-router.post("/", requireAuth, async (req: IAuthRequest, res: Response) => {
-    try {
-        const { firstName, lastName, picture, phoneNumbers, address } = req.body;
+dotenv.config();
 
-        if (!firstName || phoneNumbers.length === 0) {
+const serverUrl = process.env.SERVER_URL || '';
+const appRootPath = path.resolve(__dirname, '..', '..');
+
+const upload = multer({ dest: appRootPath + "/uploads/"});
+
+router.post("/", requireAuth, upload.single("pictureFile"), async (req: IAuthRequest, res: Response) => {
+    try {
+        // TODO: Validate the request body
+        const { firstName, lastName, phoneNumbers, address } = req.body;
+
+        const phoneNumbersArray = JSON.parse(phoneNumbers) as IPhoneNumber[] | null;
+
+        if (!firstName || phoneNumbersArray?.length === 0) {
             res.status(400).send("You need to specify first name and one phone number to create a contact!")
         }
 
         const newContact = new Contact({
             firstName,
             lastName,
-            picture,
-            phoneNumbers,
+            phoneNumbers: phoneNumbersArray,
             address,
             user: req.user,
         });
 
-        const savedContact = await newContact.save();
-        res.status(200).json(savedContact);
+        await newContact.save();
+                
+        const photoFilePath = getPhotoFilesPath(req.userId!);
+
+        if (req.file) {            
+            const savedImageName = saveContactPicture(req.file, req.userId!, newContact);
+
+            if (savedImageName) {
+                newContact.picture = savedImageName;
+                await newContact.save();
+            }
+        }
+
+        res.status(201).json({ contact: mapContact(newContact) });
     }
     catch (error) {
+        console.error(error);
         res.status(500).send("Server Error");
     }
 });
@@ -36,7 +65,7 @@ router.get("/:id", requireAuth, async (req: IAuthRequest, res: Response) => {
         const contactId = req.params.id;
 
         const contact = await Contact.findById(contactId);
-        if (!contact || contact.user._id.toString() !== req.userId) {
+        if (!contact || contact.user?._id.toString() !== req.userId) {
             return res.status(403).send("You are not authorized to update this contact.");
         }
 
@@ -52,32 +81,56 @@ router.get("/", requireAuth, async (req: IAuthRequest, res: Response) => {
     try {
         const contacts = await Contact.find({user: req.userId});
 
-        res.json({ contacts });
+        res.json({ contacts: contacts.map(mapContact) });
     } catch (error) {
         console.error(error);
         res.status(500).send("Server Error");
     }
 });
 
-router.put("/:id", requireAuth, async (req: IAuthRequest, res: Response) => {
+router.put("/:id", requireAuth, upload.single('pictureFile'), async (req: IAuthRequest, res: Response) => {
     try {
         const contactId = req.params.id;
 
-        const { firstName, lastName, picture, phoneNumbers, address } = req.body;
+        const { firstName, lastName, deletePicture, phoneNumbers, address } = req.body;
+
+        const phoneNumbersArray = JSON.parse(phoneNumbers) as IPhoneNumber[] | null;
+        if (!firstName || !phoneNumbersArray || phoneNumbersArray?.length === 0) {
+            res.status(400).send("You need to specify first name and one phone number to update a contact!")
+            return;
+        }
+
         const contact = await Contact.findById(contactId);
-        if (!contact || contact.user._id.toString() !== req.userId) {
+        if (!contact || contact.user?._id.toString() !== req.userId) {
             return res.status(403).send("You are not authorized to update this contact.");
         }
         
         contact.firstName = firstName;
         contact.lastName = lastName;
-        contact.picture = picture;
-        contact.phoneNumbers = phoneNumbers;
+        contact.phoneNumbers = phoneNumbersArray;
         contact.address = address;
+
+        if (deletePicture || req.file) {
+            if (contact.picture) {
+                const photoFilesPath = getPhotoFilesPath(req.userId!);
+                const pictureFilePath = path.join(photoFilesPath, contact.picture);
+                if (fs.existsSync(pictureFilePath)) {
+                    fs.rmSync(pictureFilePath, { recursive: true });
+                }
+            }
+            contact.picture = null;
+        }
+
+        if (req.file) {
+            const savedImageName = saveContactPicture(req.file, req.userId!, contact);
+            if (savedImageName) {
+                contact.picture = savedImageName;
+            }
+        }
         
         await contact.save();
 
-        res.json({ contact: contact });
+        res.json({ contact: mapContact(contact) });
     }
     catch (error) {
         console.error(error);
@@ -90,11 +143,21 @@ router.delete("/:id", requireAuth, async (req: IAuthRequest, res: Response) => {
         const contactId = req.params.id;
 
         const contact = await Contact.findById(contactId);
-        if (!contact || contact.user._id.toString() !== req.userId) {
+        if (!contact || contact.user?._id.toString() !== req.userId) {
             return res.status(403).send("You are not authorized to delete this contact.");
         }
 
+        const pictureFileName = contact.picture;
+
         await contact.deleteOne();
+
+        if (pictureFileName) {
+            const photoFilePath = getPhotoFilesPath(req.userId!);
+            const pictureFilePath = path.join(photoFilePath, pictureFileName);
+            if (fs.existsSync(pictureFilePath)) {
+                fs.rmSync(pictureFilePath, { recursive: true });
+            }
+        }
 
         res.json({ message: "Contact deleted successfully." });
     }
@@ -103,5 +166,54 @@ router.delete("/:id", requireAuth, async (req: IAuthRequest, res: Response) => {
         res.status(500).send("Server Error");
     }
 });
+
+
+function getPhotoFilesPath(userId: string) {
+    return path.join(appRootPath, 'content', 'photos', userId);
+}
+
+function saveContactPicture(file: Express.Multer.File, userId: string, contact: IContact) : string | null {
+    const photoFilesPath = getPhotoFilesPath(userId);
+
+    const uploadedFilename = file.path;
+
+    const imageExtension = mime.extension(file.mimetype);
+    let imageName = `${crypto.randomUUID()}.${imageExtension}`;
+    while (fs.existsSync(path.join(photoFilesPath, imageName))) {
+        imageName = `${crypto.randomUUID()}.${imageExtension}`;
+    }
+
+    const newFilePath = path.join(photoFilesPath, imageName);
+
+    if (!fs.existsSync(photoFilesPath)) {
+        fs.mkdirSync(photoFilesPath, { recursive: true });
+    }
+
+    let savedSuccessfully = true;
+    fs.rename(uploadedFilename, newFilePath, (err) => {
+        if (err) {
+            console.log(err);
+            savedSuccessfully = false;
+        }
+    });
+
+    if (savedSuccessfully) {
+        return imageName;
+    } else {
+        return null;
+    }
+}
+
+function mapContact(contact: IContact): IContactResponse {
+    return {
+        _id: contact._id,
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+        phoneNumbers: contact.phoneNumbers.map(pn => ({ type: pn.type, number: pn.number })),
+        address: contact.address,
+        picture: contact.picture,
+        pictureUrl: contact.picture && contact.user ? `${serverUrl}/content/photos/${contact.user._id.toString()}/${encodeURI(contact.picture)}` : null,
+    }
+}
 
 export default router;

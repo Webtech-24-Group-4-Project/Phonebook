@@ -47,7 +47,7 @@ const Contacts: React.FC = () => {
                     contacts.map((contact) => (
                         <div key={contact._id} className={styles.contactCard}>
                             <img
-                                src={contact.picture || defaultProfilePicture}
+                                src={contact.pictureUrl || defaultProfilePicture}
                                 alt="Contact image"
                                 className={`${styles.profilePicture} ${styles.profilePic}`}
                             />

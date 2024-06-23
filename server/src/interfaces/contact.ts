@@ -15,9 +15,9 @@ export interface IPhoneNumber {
 export interface IContact {
     _id: string;
     firstName: string;
-    lastName?: string;
-    picture?: string;
+    lastName?: string | null;
+    picture?: string | null;
     phoneNumbers: IPhoneNumber[];
-    address?: string;
-    user: IUser;
+    address?: string | null;
+    user?: IUser | null;
 }

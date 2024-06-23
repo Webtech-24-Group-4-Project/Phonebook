@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import contactsController from "./api/contacts/contactsController";
 import authController from "./api/auth/authController";
 import cookieParser from "cookie-parser";
+import multer from "multer";
 
 dotenv.config();
 
@@ -17,6 +18,9 @@ app.use(cors({
   credentials: true
 }));
 app.use(cookieParser());
+
+app.use('/content', express.static(__dirname + '/content'));
+const upload = multer({ dest: __dirname + "/uploads/"})
 
 app.use("/api/contacts", contactsController);
 app.use("/api/auth", authController);
