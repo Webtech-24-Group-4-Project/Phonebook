@@ -2,7 +2,7 @@ import express, { Request, Response } from "express";
 import dotenv from "dotenv";
 import cors from "cors"
 import mongoose from "mongoose";
-import contactsController from "./api/contactsController";
+import contactsController from "./api/contacts/contactsController";
 import authController from "./api/auth/authController";
 import cookieParser from "cookie-parser";
 
@@ -18,8 +18,8 @@ app.use(cors({
 }));
 app.use(cookieParser());
 
-app.use("/contacts", contactsController);
-app.use("/auth", authController);
+app.use("/api/contacts", contactsController);
+app.use("/api/auth", authController);
 
 app.listen(PORT, async () => {
   await mongoose.connect(process.env.DATABASE_CONNECTION_STRING as string);

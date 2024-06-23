@@ -68,9 +68,8 @@ authController.post('/logout', (req, res) => {
 });
 
 authController.get('/current', checkAuth, async (req: IAuthRequest, res) => {
-    if (req.userId) {
-        const user = await User.findById(req.userId);
-        res.json({ username: user?.username });
+    if (!!req.user) {
+        res.json({ username: req.user.username });
     }
     else {
         res.json({ username: null });

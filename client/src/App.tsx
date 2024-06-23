@@ -16,7 +16,9 @@ const App: React.FC = () => {
 
   return (
     <>
+      {user && (
         <RouterProvider router={routes} />
+      )}
     </>
   );
 }

@@ -1,3 +1,5 @@
+import { IUser } from "./user";
+
 export enum PhoneNumberType {
     mobile = 'mobile',
     work = 'work',
@@ -11,9 +13,11 @@ export interface IPhoneNumber {
 }
 
 export interface IContact {
+    _id: string;
     firstName: string;
     lastName?: string;
     picture?: string;
     phoneNumbers: IPhoneNumber[];
     address?: string;
+    user: IUser;
 }

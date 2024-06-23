@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { CreateContactFormProps } from './CreateContactForm.types';
+import { ContactFormProps } from './ContactForm.types';
 
-const CreateContactForm: React.FC<CreateContactFormProps> = ({ onContactCreated, onCancel }) => {
+const ContactForm: React.FC<ContactFormProps> = ({ contact, onSubmit, onCancel }) => {
     const [createForm, setCreateForm] = useState({
         firstName: '',
         lastName: '',
@@ -14,6 +14,30 @@ const CreateContactForm: React.FC<CreateContactFormProps> = ({ onContactCreated,
             }
         ]
     });
+
+    useEffect(() => {
+        if (contact) {
+            setCreateForm({
+                firstName: contact.firstName,
+                lastName: contact.lastName || '',
+                address: contact.address || '',
+                phoneNumbers: contact.phoneNumbers
+            });
+        }
+        else {
+            setCreateForm({
+                firstName: '',
+                lastName: '',
+                address: '',
+                phoneNumbers: [
+                    {
+                        type: '',
+                        number: ''
+                    }
+                ]
+            });
+        }
+    }, [contact]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -39,19 +63,14 @@ const CreateContactForm: React.FC<CreateContactFormProps> = ({ onContactCreated,
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         try {
-            await axios.post('http://localhost:3003/contacts', createForm);
-            onContactCreated();
-            setCreateForm({
-                firstName: '',
-                lastName: '',
-                address: '',
-                phoneNumbers: [
-                    {
-                        type: '',
-                        number: ''
-                    }
-                ]
-            });
+            if (contact) {
+                await axios.put(`/contacts/${contact._id}`, createForm);
+                onSubmit();
+            }
+            else {
+                await axios.post('/contacts', createForm);
+                onSubmit();
+            }
         } catch (error) {
             console.error('Error creating contact:', error);
         }
@@ -60,7 +79,7 @@ const CreateContactForm: React.FC<CreateContactFormProps> = ({ onContactCreated,
     return (
         <>
             <form onSubmit={handleSubmit}>
-                <h2>Create New Contact</h2>
+                <h2>{!!contact ? 'Update Contact' : 'Create Contact'}</h2>
                 <div>
                     <label>First Name:</label>
                     <input
@@ -123,11 +142,11 @@ const CreateContactForm: React.FC<CreateContactFormProps> = ({ onContactCreated,
                         Add Phone Number
                     </button>
                 </div>
-                <button type="submit">Create Contact</button>
+                <button type="submit">Save</button>
                 <button type="button" onClick={onCancel}>Cancel</button>
             </form>
         </>
     );
 }
 
-export default CreateContactForm;
+export default ContactForm;

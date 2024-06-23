@@ -2,12 +2,13 @@ import React, { useEffect } from 'react';
 import axios from 'axios';
 import { IContact } from '../../../models/contact';
 import defaultProfilePicture from '../../../user_profile.png';
-import CreateContactForm from '../../shared/create-contact-form/CreateContactForm';
+import ContactForm from '../../shared/contact-form/ContactForm';
 import styles from './Contacts.module.css';
 
 const Contacts: React.FC = () => {
     const [contacts, setContacts] = React.useState<IContact[] | null>(null);
-    const [showCreateContactForm, setCreateContactForm] = React.useState(false);
+    const [selectedContact, setSelectedContact] = React.useState<IContact | null>(null);
+    const [showContactForm, setShowContactForm] = React.useState(false);
 
     useEffect(() => {
         fetchContacts();
@@ -15,7 +16,7 @@ const Contacts: React.FC = () => {
 
     const fetchContacts = async () => {
         try {
-            const res = await axios.get('http://localhost:3003/contacts');
+            const res = await axios.get('/contacts');
             setContacts(res.data.contacts);
         }
         catch (error) {
@@ -23,10 +24,20 @@ const Contacts: React.FC = () => {
         }
     };
 
-    const handleCreateContact = () => {
+    const handleContactSubmit = () => {
+        setShowContactForm(false);
         fetchContacts();
-        setCreateContactForm(false);
-    }
+    };
+
+    const hanfleDeleteContact = async (contactId: string) => {
+        try {
+            await axios.delete(`/contacts/${contactId}`);
+            fetchContacts();
+        }
+        catch (error) {
+            console.error('Error deleting contact:', error);
+        }
+    };
 
     return (
         <>
@@ -52,6 +63,10 @@ const Contacts: React.FC = () => {
                                     ))}
                                 </ul>
                             </div>
+                            <div>
+                                <button onClick={() => { setSelectedContact(contact); setShowContactForm(true)} }>Edit</button>
+                                <button onClick={() => hanfleDeleteContact(contact._id)}>Delete</button>
+                            </div>
                         </div>
                     ))
                 ) : (
@@ -59,8 +74,8 @@ const Contacts: React.FC = () => {
                 )}
             </div>
 
-            <button onClick={() => setCreateContactForm(true)}>Create new contact</button>
-            {showCreateContactForm && < CreateContactForm onContactCreated={handleCreateContact} onCancel={() => setCreateContactForm(false)} />}
+            <button onClick={() => { setSelectedContact(null); setShowContactForm(true)} }>Create new contact</button>
+            {showContactForm && <ContactForm contact={selectedContact} onSubmit={handleContactSubmit} onCancel={() => setShowContactForm(false)} />}
         </>
     );
 }
