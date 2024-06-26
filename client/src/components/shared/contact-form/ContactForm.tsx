@@ -2,11 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { ContactFormProps } from './ContactForm.types';
 import defaultProfilePicture from '../../../user_profile.png';
+import './ContactForm.styles.css';
 
 interface IContactForm {
     firstName: string;
     lastName: string;
-    address: string;
+    address?: string;
     phoneNumbers: {
         type: string;
         number: string;
@@ -29,6 +30,8 @@ const ContactForm: React.FC<ContactFormProps> = ({ contact, onSubmit, onCancel }
         pictureFile: null,
         deletePicture: false
     });
+
+    const [inputErrors, setInputErrors] = useState<{ [key: string]: string }>({});
 
     useEffect(() => {
         if (contact) {
@@ -78,6 +81,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ contact, onSubmit, onCancel }
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setCreateForm({ ...createForm, [name]: value });
+        setInputErrors(prevErrors => ({ ...prevErrors, [name]: '' }));
     }
 
     const handlePhoneNumberChange = (index: number, e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -85,12 +89,14 @@ const ContactForm: React.FC<ContactFormProps> = ({ contact, onSubmit, onCancel }
         const phoneNumbers = [...createForm.phoneNumbers];
         phoneNumbers[index] = { ...phoneNumbers[index], [name]: value };
         setCreateForm({ ...createForm, phoneNumbers });
+        setInputErrors(prevErrors => ({ ...prevErrors, [`phoneType_${index}`]: '', [`phoneNumber_${index}`]: '' }));
     };
 
     const handleAddPhoneNumber = () => {
         setCreateForm({ ...createForm, phoneNumbers: [...createForm.phoneNumbers, { type: '', number: '' }] });
     };
 
+    
     const handleRemovePhoneNumber = (index: number) => {
         const phoneNumbers = createForm.phoneNumbers.filter((_, i) => i !== index);
         setCreateForm({ ...createForm, phoneNumbers });
@@ -98,13 +104,31 @@ const ContactForm: React.FC<ContactFormProps> = ({ contact, onSubmit, onCancel }
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+
+        // Validate required fields
+        const errors: { [key: string]: string } = {};
+        if (!createForm.firstName.trim()) {
+            errors.firstName = 'Invalid input.';
+        }
+        if (!createForm.phoneNumbers.every((phone, index) => phone.type && phone.number.length === 10)) {
+            createForm.phoneNumbers.forEach((phone, index) => {
+                if (!phone.type) errors[`phoneType_${index}`] = 'Invalid input.';
+                if (phone.number.length !== 10) errors[`phoneNumber_${index}`] = 'Invalid input.';
+            });
+        }
+
+        if (Object.keys(errors).length > 0) {
+            setInputErrors(errors);
+            return;
+        }
+
         try {
             const formData = new FormData();
             formData.append('firstName', createForm.firstName);
-            if (createForm.lastName) {
+            if (createForm.lastName.trim()) {
                 formData.append('lastName', createForm.lastName);
             }
-            if (createForm.address) {
+            if (createForm.address?.trim()) {
                 formData.append('address', createForm.address);
             }
             formData.append('phoneNumbers', JSON.stringify(createForm.phoneNumbers));
@@ -128,12 +152,17 @@ const ContactForm: React.FC<ContactFormProps> = ({ contact, onSubmit, onCancel }
         }
     };
 
+    const handleCancel = () => {
+        setInputErrors({});
+        onCancel();
+    }
+
     return (
-        <>
-            <form onSubmit={handleSubmit}>
+        <div className="contact-form-container">
+            <form onSubmit={handleSubmit} noValidate>
                 <h2>{!!contact ? 'Update Contact' : 'Create Contact'}</h2>
                 <div>
-                    <label>First Name:</label>
+                    <label>First Name: <span className="required">*</span></label>
                     <input
                         type="text"
                         name="firstName"
@@ -141,6 +170,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ contact, onSubmit, onCancel }
                         onChange={handleInputChange}
                         required
                     />
+                    {inputErrors.firstName && <span className="validation-error">{inputErrors.firstName}</span>}
                 </div>
                 <div>
                     <label>Last Name:</label>
@@ -181,7 +211,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ contact, onSubmit, onCancel }
                     />
                 </div>
                 <div>
-                    <h4>Phone Numbers:</h4>
+                    <h4>Phone Numbers: <span className="required">*</span></h4>
                     {createForm.phoneNumbers.map((phone, index) => (
                         <div key={index}>
                             <select
@@ -203,21 +233,20 @@ const ContactForm: React.FC<ContactFormProps> = ({ contact, onSubmit, onCancel }
                                 onChange={(e) => handlePhoneNumberChange(index, e)}
                                 required
                             />
-                            {index > 0 && (
-                                <button type="button" onClick={() => handleRemovePhoneNumber(index)}>
-                                    Remove
-                                </button>
-                            )}
+                            {inputErrors[`phoneType_${index}`] && <span className="validation-error">{inputErrors[`phoneType_${index}`]}</span>}
+                            {inputErrors[`phoneNumber_${index}`] && <span className="validation-error">{inputErrors[`phoneNumber_${index}`]}</span>}
                         </div>
                     ))}
                     <button type="button" onClick={handleAddPhoneNumber}>
                         Add Phone Number
                     </button>
                 </div>
-                <button type="submit">Save</button>
-                <button type="button" onClick={onCancel}>Cancel</button>
+                <div className="bottom">
+                    <button type="submit">Save</button>
+                    <button type="button" onClick={handleCancel}>Cancel</button>
+                </div>
             </form>
-        </>
+        </div>
     );
 }
 

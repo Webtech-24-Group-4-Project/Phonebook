@@ -25,6 +25,14 @@ export const initUser = createAsyncThunk('initUser', async () : Promise<LoggedIn
     }
 });
 
+export const logoutUser = createAsyncThunk('logoutUser', async () => {
+    try {
+        await axios.post('/auth/logout');
+    }
+    catch (error) {
+        console.error('Error logging out', error);
+    }
+});
 
 export const userSlice = createSlice({
     name: 'user',
@@ -33,19 +41,22 @@ export const userSlice = createSlice({
         login: (state, action: PayloadAction<LoggedInUser>) => {
             state.user = action.payload;
         },
-        logout: (state) => {
-            state.user = null;
-        },
     },
     extraReducers: (builder) => {
         builder.addCase(initUser.fulfilled, (state, action) => {
             state.user = action.payload;
+        });
+        builder.addCase(logoutUser.fulfilled, (state) => {
+            state.user = null;
+            window.location.href = '/';
         });
     }
 });
 
 export const selectUser = (state: { user: UserState }) => state.user.user;
 
-export const { login, logout } = userSlice.actions;
+export const { login } = userSlice.actions;
+
+
 
 export default userSlice.reducer;

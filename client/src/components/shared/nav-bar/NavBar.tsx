@@ -1,50 +1,50 @@
 import React from 'react';
-import { Link, redirect, useNavigate } from 'react-router-dom';
-
+import { Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
-import { logout, selectUser } from '../../../store/features/userSlice';
-
+import { logoutUser, selectUser } from '../../../store/features/userSlice';
+import './NavBar.css'; // Import your CSS file for styling
 
 const NavBar: React.FC = () => {
     const dispatch = useAppDispatch();
     const username = useAppSelector(selectUser)?.username;
     const isLoggedIn = !!username;
-    const navigate = useNavigate();
 
-    const handleLogout = () => {
-        dispatch(logout());
-        navigate('/');
+    const handleLogout = async () => {
+        dispatch(logoutUser());
     };
 
     return (
-        <nav>
-            <ul>
-                <li>
-                    <Link to="/">Home</Link>
-                </li>
-                {isLoggedIn && (
-                    <li>
-                        <Link to="/contacts">Contacts</Link>
+        <nav className="navbar">
+            <div className="navbar-left">
+                <ul className="navbar-nav">
+                    <li className="nav-item">
+                        <Link to="/" className="nav-link">Home</Link>
                     </li>
-                )}
-                {!isLoggedIn && (
-                    <>
-                        <li>
-                            <Link to="/login">Login</Link>
+                    {isLoggedIn && (
+                        <li className="nav-item">
+                            <Link to="/contacts" className="nav-link">Contacts</Link>
                         </li>
-                        <li>
-                            <Link to="/register">Register</Link>
-                        </li>
-                    </>
+                    )}
+                    {!isLoggedIn && (
+                        <>
+                            <li className="nav-item">
+                                <Link to="/login" className="nav-link">Login</Link>
+                            </li>
+                            <li className="nav-item">
+                                <Link to="/register" className="nav-link">Register</Link>
+                            </li>
+                        </>
+                    )}
+                </ul>
+            </div>
+            <div className="navbar-right">
+                {isLoggedIn && (
+                    <div className="user-info">
+                        <span className="logged-in-as">Logged in as: {username}</span>
+                        <button className="logout-btn" onClick={handleLogout}>Logout</button>
+                    </div>
                 )}
-            </ul>
-
-            {isLoggedIn && (
-                <div>
-                    <span>Logged in as: {username}   </span>
-                    <span><a onClick={handleLogout}>Logout</a></span>
-                </div>
-            )}
+            </div>
         </nav>
     );
 };

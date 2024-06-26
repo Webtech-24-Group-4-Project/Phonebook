@@ -22,13 +22,12 @@ const upload = multer({ dest: appRootPath + "/uploads/"});
 
 router.post("/", requireAuth, upload.single("pictureFile"), async (req: IAuthRequest, res: Response) => {
     try {
-        // TODO: Validate the request body
         const { firstName, lastName, phoneNumbers, address } = req.body;
 
         const phoneNumbersArray = JSON.parse(phoneNumbers) as IPhoneNumber[] | null;
 
         if (!firstName || phoneNumbersArray?.length === 0) {
-            res.status(400).send("You need to specify first name and one phone number to create a contact!")
+            return res.status(400).send("You need to specify first name and one phone number to create a contact!")
         }
 
         const newContact = new Contact({
@@ -96,8 +95,7 @@ router.put("/:id", requireAuth, upload.single('pictureFile'), async (req: IAuthR
 
         const phoneNumbersArray = JSON.parse(phoneNumbers) as IPhoneNumber[] | null;
         if (!firstName || !phoneNumbersArray || phoneNumbersArray?.length === 0) {
-            res.status(400).send("You need to specify first name and one phone number to update a contact!")
-            return;
+            return res.status(400).send("You need to specify first name and one phone number to update a contact!")
         }
 
         const contact = await Contact.findById(contactId);
@@ -192,7 +190,6 @@ function saveContactPicture(file: Express.Multer.File, userId: string, contact: 
     let savedSuccessfully = true;
     fs.rename(uploadedFilename, newFilePath, (err) => {
         if (err) {
-            console.log(err);
             savedSuccessfully = false;
         }
     });
@@ -217,3 +214,62 @@ function mapContact(contact: IContact): IContactResponse {
 }
 
 export default router;
+
+// PUT /merge/:id1/:id2
+router.put("/merge/:id1/:id2", requireAuth, async (req: IAuthRequest, res: Response) => {
+    try {
+        const { id1, id2 } = req.params;
+
+        // Find the contacts by their IDs and validate user ownership
+        const contact1 = await Contact.findById(id1);
+        const contact2 = await Contact.findById(id2);
+        
+        if (!contact1 || !contact2) {
+            return res.status(404).send("Contacts not found.");
+        }
+
+        if (contact1.user?._id.toString() !== req.userId || contact2.user?._id.toString() !== req.userId) {
+            return res.status(403).send("You are not authorized to merge these contacts.");
+        }
+
+        // Merge logic (example: combine fields, update references)
+        // Example: merge phoneNumbers
+        const mergedPhoneNumbers = [...contact1.phoneNumbers, ...contact2.phoneNumbers];
+        // Ensure no duplicates (implement your logic based on your use case)
+
+        // Update contact1 with merged data
+        contact1.phoneNumbers = mergedPhoneNumbers;
+        await contact1.save();
+
+        // Remove contact2
+        await contact2.deleteOne();
+
+        // Return success message or updated contact1
+        res.json({ message: "Contacts merged successfully.", contact: mapContact(contact1) });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Server Error");
+    }
+});
+
+// GET /search?q=:query
+router.get("/search", requireAuth, async (req: IAuthRequest, res: Response) => {
+    try {
+        const query = req.query.q?.toString() || "";
+
+        // Perform a search query (example: search by firstName and lastName)
+        const searchResults = await Contact.find({
+            $or: [
+                { firstName: { $regex: query, $options: "i" } }, // Case-insensitive search
+                { lastName: { $regex: query, $options: "i" } }
+            ],
+            user: req.userId // Ensure results belong to the authenticated user
+        });
+
+        // Return the search results
+        res.json({ contacts: searchResults.map(mapContact) });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Server Error");
+    }
+});
